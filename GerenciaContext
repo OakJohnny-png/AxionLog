@@ -1,0 +1,188 @@
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+export interface ItemStock {
+  codigo: string;
+  descricao: string;
+  localizacao: string;
+  quantidade: number;
+}
+
+export interface Cliente {
+  codigo: string;
+  nome: string;
+}
+
+export interface Utilizador {
+  nome: string;
+  senha: string;
+  papel: 'admin' | 'operador' | 'visualizador';
+  dataCriacao: string;
+}
+
+interface GerenciaContextType {
+  // Stock
+  itensStock: ItemStock[];
+  adicionarItemStock: (item: ItemStock) => void;
+  atualizarItemStock: (codigo: string, item: Partial<ItemStock>) => void;
+  removerItemStock: (codigo: string) => void;
+  buscarItemStock: (termo: string) => ItemStock[];
+  importarStockEmLote: (itens: ItemStock[]) => void;
+
+  // Clientes
+  clientes: Cliente[];
+  adicionarCliente: (cliente: Cliente) => void;
+  atualizarCliente: (codigo: string, cliente: Partial<Cliente>) => void;
+  removerCliente: (codigo: string) => void;
+  importarClientesEmLote: (clientes: Cliente[]) => void;
+
+  // Utilizadores
+  utilizadores: Utilizador[];
+  adicionarUtilizador: (utilizador: Utilizador) => void;
+  removerUtilizador: (nome: string) => void;
+  validarUtilizador: (nome: string, senha: string) => boolean;
+
+  // Estatísticas
+  totalItens: number;
+  totalClientes: number;
+  totalUtilizadores: number;
+}
+
+const GerenciaContext = createContext<GerenciaContextType | undefined>(undefined);
+
+export const GerenciaProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Dados de teste iniciais
+  const [itensStock, setItensStock] = useState<ItemStock[]>([
+    { codigo: 'MAT-001', descricao: 'Cimento Portland 50kg', localizacao: 'Bloco A - Prateleira 3', quantidade: 500 },
+    { codigo: 'MAT-002', descricao: 'Areia Média m³', localizacao: 'Pátio Externo - Pilha 1', quantidade: 100 },
+    { codigo: 'MAT-003', descricao: 'Brita 19mm m³', localizacao: 'Pátio Externo - Pilha 2', quantidade: 80 },
+  ]);
+
+  const [clientes, setClientes] = useState<Cliente[]>([
+    { codigo: 'CLI-001', nome: 'Construtora Silva' },
+    { codigo: 'CLI-002', nome: 'Obra Centro' },
+    { codigo: 'CLI-003', nome: 'Reforma Ltda' },
+  ]);
+
+  const [utilizadores, setUtilizadores] = useState<Utilizador[]>([
+    { nome: 'admin', senha: 'admin123', papel: 'admin', dataCriacao: new Date().toISOString() },
+    { nome: 'operador', senha: 'op123', papel: 'operador', dataCriacao: new Date().toISOString() },
+  ]);
+
+  // Funções de Stock
+  const adicionarItemStock = (item: ItemStock) => {
+    // Verificar se já existe
+    if (itensStock.find(i => i.codigo === item.codigo)) {
+      throw new Error('Item com este código já existe');
+    }
+    setItensStock([...itensStock, item]);
+  };
+
+  const atualizarItemStock = (codigo: string, updates: Partial<ItemStock>) => {
+    setItensStock(
+      itensStock.map(item =>
+        item.codigo === codigo ? { ...item, ...updates } : item
+      )
+    );
+  };
+
+  const removerItemStock = (codigo: string) => {
+    setItensStock(itensStock.filter(item => item.codigo !== codigo));
+  };
+
+  const buscarItemStock = (termo: string): ItemStock[] => {
+    if (!termo.trim()) return itensStock;
+    
+    const termoLower = termo.toLowerCase();
+    return itensStock.filter(
+      item =>
+        item.codigo.toLowerCase().includes(termoLower) ||
+        item.descricao.toLowerCase().includes(termoLower) ||
+        item.localizacao.toLowerCase().includes(termoLower)
+    ).slice(0, 15); // Limitar a 15 resultados
+  };
+
+  const importarStockEmLote = (itens: ItemStock[]) => {
+    // Remover duplicatas baseado em código
+    const codigosExistentes = new Set(itensStock.map(i => i.codigo));
+    const novosItens = itens.filter(item => !codigosExistentes.has(item.codigo));
+    setItensStock([...itensStock, ...novosItens]);
+  };
+
+  // Funções de Clientes
+  const adicionarCliente = (cliente: Cliente) => {
+    if (clientes.find(c => c.codigo === cliente.codigo)) {
+      throw new Error('Cliente com este código já existe');
+    }
+    setClientes([...clientes, cliente]);
+  };
+
+  const atualizarCliente = (codigo: string, updates: Partial<Cliente>) => {
+    setClientes(
+      clientes.map(cliente =>
+        cliente.codigo === codigo ? { ...cliente, ...updates } : cliente
+      )
+    );
+  };
+
+  const removerCliente = (codigo: string) => {
+    setClientes(clientes.filter(cliente => cliente.codigo !== codigo));
+  };
+
+  const importarClientesEmLote = (novoClientes: Cliente[]) => {
+    const codigosExistentes = new Set(clientes.map(c => c.codigo));
+    const novosClientes = novoClientes.filter(cliente => !codigosExistentes.has(cliente.codigo));
+    setClientes([...clientes, ...novosClientes]);
+  };
+
+  // Funções de Utilizadores
+  const adicionarUtilizador = (utilizador: Utilizador) => {
+    if (utilizadores.find(u => u.nome === utilizador.nome)) {
+      throw new Error('Utilizador com este nome já existe');
+    }
+    setUtilizadores([...utilizadores, utilizador]);
+  };
+
+  const removerUtilizador = (nome: string) => {
+    setUtilizadores(utilizadores.filter(u => u.nome !== nome));
+  };
+
+  const validarUtilizador = (nome: string, senha: string): boolean => {
+    const utilizador = utilizadores.find(u => u.nome === nome);
+    return utilizador ? utilizador.senha === senha : false;
+  };
+
+  return (
+    <GerenciaContext.Provider
+      value={{
+        itensStock,
+        adicionarItemStock,
+        atualizarItemStock,
+        removerItemStock,
+        buscarItemStock,
+        importarStockEmLote,
+        clientes,
+        adicionarCliente,
+        atualizarCliente,
+        removerCliente,
+        importarClientesEmLote,
+        utilizadores,
+        adicionarUtilizador,
+        removerUtilizador,
+        validarUtilizador,
+        totalItens: itensStock.length,
+        totalClientes: clientes.length,
+        totalUtilizadores: utilizadores.length,
+      }}
+    >
+      {children}
+    </GerenciaContext.Provider>
+  );
+};
+
+export const useGerencia = () => {
+  const context = useContext(GerenciaContext);
+  if (!context) {
+    throw new Error('useGerencia deve ser usado dentro de GerenciaProvider');
+  }
+  return context;
+};

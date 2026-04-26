@@ -1,0 +1,201 @@
+import { useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Search, MapPin, Package } from 'lucide-react';
+
+interface Material {
+  codigo: string;
+  descricao: string;
+  categoria: string;
+  localizacao: string;
+  quantidade: number;
+  unidade: string;
+}
+
+// Dados de teste com 30 materiais (simulando 30k)
+const MATERIAIS_TESTE: Material[] = [
+  { codigo: 'MAT-001', descricao: 'Cimento Portland 50kg', categoria: 'Cimento', localizacao: 'Bloco A - Prateleira 3', quantidade: 500, unidade: 'sacos' },
+  { codigo: 'MAT-002', descricao: 'Areia Média m³', categoria: 'Agregados', localizacao: 'Pátio Externo - Pilha 1', quantidade: 100, unidade: 'm³' },
+  { codigo: 'MAT-003', descricao: 'Brita 19mm m³', categoria: 'Agregados', localizacao: 'Pátio Externo - Pilha 2', quantidade: 80, unidade: 'm³' },
+  { codigo: 'MAT-004', descricao: 'Tijolos 6 furos', categoria: 'Alvenaria', localizacao: 'Bloco B - Prateleira 1', quantidade: 5000, unidade: 'unidades' },
+  { codigo: 'MAT-005', descricao: 'Cal Hidratada 20kg', categoria: 'Cimento', localizacao: 'Bloco A - Prateleira 2', quantidade: 300, unidade: 'sacos' },
+  { codigo: 'MAT-006', descricao: 'Ferro 5/16" 12m', categoria: 'Ferro', localizacao: 'Bloco C - Prateleira 1', quantidade: 2000, unidade: 'barras' },
+  { codigo: 'MAT-007', descricao: 'Arame Recozido 1kg', categoria: 'Ferro', localizacao: 'Bloco C - Prateleira 2', quantidade: 500, unidade: 'bobinas' },
+  { codigo: 'MAT-008', descricao: 'Tela de Aço 2x2', categoria: 'Ferro', localizacao: 'Bloco D - Prateleira 1', quantidade: 1000, unidade: 'm²' },
+  { codigo: 'MAT-009', descricao: 'Telha Cerâmica Francesa', categoria: 'Cobertura', localizacao: 'Bloco E - Prateleira 1', quantidade: 5000, unidade: 'unidades' },
+  { codigo: 'MAT-010', descricao: 'Cumeeira Cerâmica', categoria: 'Cobertura', localizacao: 'Bloco E - Prateleira 2', quantidade: 500, unidade: 'unidades' },
+  { codigo: 'MAT-011', descricao: 'Cano PVC 100mm', categoria: 'Hidráulica', localizacao: 'Bloco F - Prateleira 1', quantidade: 1000, unidade: 'metros' },
+  { codigo: 'MAT-012', descricao: 'Joelho PVC 90° 100mm', categoria: 'Hidráulica', localizacao: 'Bloco F - Prateleira 2', quantidade: 2000, unidade: 'unidades' },
+  { codigo: 'MAT-013', descricao: 'Fio Elétrico 2.5mm', categoria: 'Elétrica', localizacao: 'Bloco G - Prateleira 1', quantidade: 5000, unidade: 'metros' },
+  { codigo: 'MAT-014', descricao: 'Disjuntor 32A', categoria: 'Elétrica', localizacao: 'Bloco G - Prateleira 2', quantidade: 200, unidade: 'unidades' },
+  { codigo: 'MAT-015', descricao: 'Tomada 2P+T', categoria: 'Elétrica', localizacao: 'Bloco G - Prateleira 3', quantidade: 1000, unidade: 'unidades' },
+  { codigo: 'MAT-016', descricao: 'Gesso em Pó 60kg', categoria: 'Acabamento', localizacao: 'Bloco H - Prateleira 1', quantidade: 400, unidade: 'sacos' },
+  { codigo: 'MAT-017', descricao: 'Tinta Acrílica 18L', categoria: 'Acabamento', localizacao: 'Bloco H - Prateleira 2', quantidade: 300, unidade: 'baldes' },
+  { codigo: 'MAT-018', descricao: 'Massa Corrida 25kg', categoria: 'Acabamento', localizacao: 'Bloco H - Prateleira 3', quantidade: 250, unidade: 'sacos' },
+  { codigo: 'MAT-019', descricao: 'Porcelanato 60x60', categoria: 'Revestimento', localizacao: 'Bloco I - Prateleira 1', quantidade: 2000, unidade: 'm²' },
+  { codigo: 'MAT-020', descricao: 'Azulejo 20x20', categoria: 'Revestimento', localizacao: 'Bloco I - Prateleira 2', quantidade: 3000, unidade: 'm²' },
+  { codigo: 'MAT-021', descricao: 'Vidro Comum 3mm', categoria: 'Vidros', localizacao: 'Bloco J - Prateleira 1', quantidade: 500, unidade: 'm²' },
+  { codigo: 'MAT-022', descricao: 'Vidro Temperado 8mm', categoria: 'Vidros', localizacao: 'Bloco J - Prateleira 2', quantidade: 300, unidade: 'm²' },
+  { codigo: 'MAT-023', descricao: 'Parafuso 3/8" x 2"', categoria: 'Ferragens', localizacao: 'Bloco K - Prateleira 1', quantidade: 10000, unidade: 'unidades' },
+  { codigo: 'MAT-024', descricao: 'Prego 2.5"', categoria: 'Ferragens', localizacao: 'Bloco K - Prateleira 2', quantidade: 15000, unidade: 'unidades' },
+  { codigo: 'MAT-025', descricao: 'Dobradiça Cromada', categoria: 'Ferragens', localizacao: 'Bloco K - Prateleira 3', quantidade: 800, unidade: 'pares' },
+  { codigo: 'MAT-026', descricao: 'Madeira Compensado 18mm', categoria: 'Madeira', localizacao: 'Pátio Externo - Pilha 3', quantidade: 500, unidade: 'placas' },
+  { codigo: 'MAT-027', descricao: 'Madeira Pinus 2x4', categoria: 'Madeira', localizacao: 'Pátio Externo - Pilha 4', quantidade: 1000, unidade: 'metros' },
+  { codigo: 'MAT-028', descricao: 'Impermeabilizante 20L', categoria: 'Químicos', localizacao: 'Bloco L - Prateleira 1', quantidade: 150, unidade: 'baldes' },
+  { codigo: 'MAT-029', descricao: 'Selador Acrílico 18L', categoria: 'Químicos', localizacao: 'Bloco L - Prateleira 2', quantidade: 200, unidade: 'baldes' },
+  { codigo: 'MAT-030', descricao: 'Espaçador de Cerâmica', categoria: 'Ferragens', localizacao: 'Bloco K - Prateleira 4', quantidade: 5000, unidade: 'unidades' },
+];
+
+export default function Finder() {
+  const [busca, setBusca] = useState('');
+  const [materialSelecionado, setMaterialSelecionado] = useState<Material | null>(null);
+
+  // Filtrar materiais baseado na busca
+  const materiaisFiltrados = useMemo(() => {
+    if (!busca.trim()) return MATERIAIS_TESTE;
+
+    const termoBusca = busca.toLowerCase();
+    return MATERIAIS_TESTE.filter(
+      material =>
+        material.codigo.toLowerCase().includes(termoBusca) ||
+        material.descricao.toLowerCase().includes(termoBusca) ||
+        material.categoria.toLowerCase().includes(termoBusca) ||
+        material.localizacao.toLowerCase().includes(termoBusca)
+    );
+  }, [busca]);
+
+  // Agrupar por categoria
+  const materiaisPorCategoria = useMemo(() => {
+    const agrupados: { [key: string]: Material[] } = {};
+    materiaisFiltrados.forEach(material => {
+      if (!agrupados[material.categoria]) {
+        agrupados[material.categoria] = [];
+      }
+      agrupados[material.categoria].push(material);
+    });
+    return agrupados;
+  }, [materiaisFiltrados]);
+
+  return (
+    <div className="space-y-6">
+      {/* Barra de Busca */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
+        <Input
+          placeholder="Buscar por código, descrição, categoria ou localização..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Resultados */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Lista de Materiais */}
+        <div className="lg:col-span-2 space-y-4">
+          {Object.entries(materiaisPorCategoria).length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Nenhum material encontrado</p>
+            </Card>
+          ) : (
+            Object.entries(materiaisPorCategoria).map(([categoria, materiais]) => (
+              <div key={categoria}>
+                <h3 className="font-bold text-foreground mb-3 text-sm uppercase tracking-wide">
+                  {categoria}
+                </h3>
+                <div className="space-y-2">
+                  {materiais.map((material) => (
+                    <Card
+                      key={material.codigo}
+                      className={`p-4 cursor-pointer transition-all border-l-4 ${
+                        materialSelecionado?.codigo === material.codigo
+                          ? 'border-l-accent bg-secondary'
+                          : 'border-l-border hover:border-l-accent'
+                      }`}
+                      onClick={() => setMaterialSelecionado(material)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="font-mono font-semibold text-sm text-foreground">
+                            {material.codigo}
+                          </p>
+                          <p className="text-sm text-foreground mt-1">{material.descricao}</p>
+                        </div>
+                        <Badge variant="outline">{material.categoria}</Badge>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Detalhes do Material Selecionado */}
+        <div>
+          {materialSelecionado ? (
+            <Card className="p-6 sticky top-20">
+              <h3 className="font-bold text-foreground mb-4">Detalhes</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Código</p>
+                  <p className="font-mono font-semibold text-foreground">
+                    {materialSelecionado.codigo}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Descrição</p>
+                  <p className="text-foreground">{materialSelecionado.descricao}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Categoria</p>
+                  <Badge className="mt-1">{materialSelecionado.categoria}</Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Quantidade em Estoque</p>
+                  <p className="text-lg font-bold text-accent">
+                    {materialSelecionado.quantidade} {materialSelecionado.unidade}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-border">
+                  <div className="flex items-start gap-2">
+                    <MapPin size={16} className="text-accent flex-shrink-0 mt-1" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Localização</p>
+                      <p className="font-mono text-sm text-foreground">
+                        {materialSelecionado.localizacao}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button className="w-full bg-accent text-accent-foreground">
+                  <Package size={16} className="mr-2" />
+                  Adicionar ao Pedido
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-6 text-center">
+              <p className="text-muted-foreground">Selecione um material para ver detalhes</p>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Resumo de Busca */}
+      <Card className="p-4 bg-secondary">
+        <p className="text-sm text-foreground">
+          <strong>{materiaisFiltrados.length}</strong> material(is) encontrado(s)
+          {busca && ` para "${busca}"`}
+        </p>
+      </Card>
+    </div>
+  );
+}

@@ -1,0 +1,470 @@
+import { useState } from 'react';
+import { useGerencia } from '@/contexts/GerenciaContext';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Plus, Trash2, Edit2, Search, Settings, Users, Package } from 'lucide-react';
+
+export default function Gerencia() {
+  const {
+    itensStock,
+    adicionarItemStock,
+    atualizarItemStock,
+    removerItemStock,
+    buscarItemStock,
+    clientes,
+    adicionarCliente,
+    removerCliente,
+    utilizadores,
+    adicionarUtilizador,
+    removerUtilizador,
+    totalItens,
+    totalClientes,
+    totalUtilizadores,
+  } = useGerencia();
+
+  const [abaSelecionada, setAbaSelecionada] = useState('stock');
+  const [buscaStock, setBuscaStock] = useState('');
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [itemEditando, setItemEditando] = useState<string | null>(null);
+
+  // Form state para Stock
+  const [formStock, setFormStock] = useState({
+    codigo: '',
+    descricao: '',
+    localizacao: '',
+    quantidade: 0,
+  });
+
+  // Form state para Cliente
+  const [formCliente, setFormCliente] = useState({
+    codigo: '',
+    nome: '',
+  });
+
+  // Form state para Utilizador
+  const [formUtilizador, setFormUtilizador] = useState({
+    nome: '',
+    senha: '',
+    papel: 'operador' as const,
+  });
+
+  const resultadosBusca = buscaStock ? buscarItemStock(buscaStock) : itensStock;
+
+  // Handlers para Stock
+  const handleSalvarStock = () => {
+    if (!formStock.codigo || !formStock.descricao) {
+      alert('Preencha código e descrição');
+      return;
+    }
+
+    try {
+      if (itemEditando) {
+        atualizarItemStock(itemEditando, formStock);
+        setItemEditando(null);
+      } else {
+        adicionarItemStock(formStock);
+      }
+      setFormStock({ codigo: '', descricao: '', localizacao: '', quantidade: 0 });
+      setDialogAberto(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao salvar');
+    }
+  };
+
+  const handleEditarStock = (codigo: string) => {
+    const item = itensStock.find(i => i.codigo === codigo);
+    if (item) {
+      setFormStock(item);
+      setItemEditando(codigo);
+      setDialogAberto(true);
+    }
+  };
+
+  const handleNovoStock = () => {
+    setFormStock({ codigo: '', descricao: '', localizacao: '', quantidade: 0 });
+    setItemEditando(null);
+    setDialogAberto(true);
+  };
+
+  // Handlers para Cliente
+  const handleSalvarCliente = () => {
+    if (!formCliente.codigo || !formCliente.nome) {
+      alert('Preencha código e nome');
+      return;
+    }
+
+    try {
+      adicionarCliente(formCliente);
+      setFormCliente({ codigo: '', nome: '' });
+      setDialogAberto(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao salvar');
+    }
+  };
+
+  // Handlers para Utilizador
+  const handleSalvarUtilizador = () => {
+    if (!formUtilizador.nome || !formUtilizador.senha) {
+      alert('Preencha nome e senha');
+      return;
+    }
+
+    try {
+      adicionarUtilizador({
+        ...formUtilizador,
+        dataCriacao: new Date().toISOString(),
+      });
+      setFormUtilizador({ nome: '', senha: '', papel: 'operador' });
+      setDialogAberto(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao salvar');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Settings className="text-accent" size={28} />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Gerência</h1>
+            <p className="text-sm text-muted-foreground">Painel administrativo do sistema</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total de Itens</p>
+              <p className="text-3xl font-bold text-foreground mt-2">{totalItens}</p>
+            </div>
+            <Package className="text-accent" size={32} />
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total de Clientes</p>
+              <p className="text-3xl font-bold text-foreground mt-2">{totalClientes}</p>
+            </div>
+            <Users className="text-accent" size={32} />
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Utilizadores</p>
+              <p className="text-3xl font-bold text-foreground mt-2">{totalUtilizadores}</p>
+            </div>
+            <Settings className="text-accent" size={32} />
+          </div>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={abaSelecionada} onValueChange={setAbaSelecionada} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="stock">Stock</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="utilizadores">Utilizadores</TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Stock */}
+        <TabsContent value="stock" className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
+              <Input
+                placeholder="Buscar por código, descrição ou localização..."
+                value={buscaStock}
+                onChange={(e) => setBuscaStock(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Dialog open={dialogAberto && abaSelecionada === 'stock'} onOpenChange={setDialogAberto}>
+              <DialogTrigger asChild>
+                <Button className="bg-accent text-accent-foreground" onClick={handleNovoStock}>
+                  <Plus size={18} className="mr-2" />
+                  Novo Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {itemEditando ? 'Editar Item' : 'Novo Item de Stock'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Código</label>
+                    <Input
+                      placeholder="MAT-001"
+                      value={formStock.codigo}
+                      onChange={(e) => setFormStock({ ...formStock, codigo: e.target.value })}
+                      disabled={!!itemEditando}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Descrição</label>
+                    <Input
+                      placeholder="Descrição do material"
+                      value={formStock.descricao}
+                      onChange={(e) => setFormStock({ ...formStock, descricao: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Localização</label>
+                    <Input
+                      placeholder="Bloco A - Prateleira 1"
+                      value={formStock.localizacao}
+                      onChange={(e) => setFormStock({ ...formStock, localizacao: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Quantidade</label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={formStock.quantidade}
+                      onChange={(e) => setFormStock({ ...formStock, quantidade: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setDialogAberto(false);
+                        setItemEditando(null);
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button className="flex-1 bg-accent text-accent-foreground" onClick={handleSalvarStock}>
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Lista de Stock */}
+          <div className="space-y-2">
+            {resultadosBusca.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">Nenhum item encontrado</p>
+              </Card>
+            ) : (
+              resultadosBusca.map((item) => (
+                <Card key={item.codigo} className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-mono font-semibold text-foreground">{item.codigo}</p>
+                      <p className="text-sm text-foreground mt-1">{item.descricao}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <p className="text-xs text-muted-foreground">Localização:</p>
+                        <p className="font-mono text-xs text-foreground">{item.localizacao}</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className="bg-accent text-accent-foreground">
+                          {item.quantidade} unidades
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditarStock(item.codigo)}
+                      >
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removerItemStock(item.codigo)}
+                      >
+                        <Trash2 size={16} className="text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Tab: Clientes */}
+        <TabsContent value="clientes" className="space-y-4">
+          <div className="flex justify-end">
+            <Dialog open={dialogAberto && abaSelecionada === 'clientes'} onOpenChange={setDialogAberto}>
+              <DialogTrigger asChild>
+                <Button className="bg-accent text-accent-foreground">
+                  <Plus size={18} className="mr-2" />
+                  Novo Cliente
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Novo Cliente</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Código</label>
+                    <Input
+                      placeholder="CLI-001"
+                      value={formCliente.codigo}
+                      onChange={(e) => setFormCliente({ ...formCliente, codigo: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Nome</label>
+                    <Input
+                      placeholder="Nome do cliente"
+                      value={formCliente.nome}
+                      onChange={(e) => setFormCliente({ ...formCliente, nome: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button variant="outline" className="flex-1" onClick={() => setDialogAberto(false)}>
+                      Cancelar
+                    </Button>
+                    <Button className="flex-1 bg-accent text-accent-foreground" onClick={handleSalvarCliente}>
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Lista de Clientes */}
+          <div className="space-y-2">
+            {clientes.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">Nenhum cliente registrado</p>
+              </Card>
+            ) : (
+              clientes.map((cliente) => (
+                <Card key={cliente.codigo} className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-mono font-semibold text-foreground">{cliente.codigo}</p>
+                    <p className="text-sm text-foreground">{cliente.nome}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removerCliente(cliente.codigo)}
+                  >
+                    <Trash2 size={16} className="text-destructive" />
+                  </Button>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Tab: Utilizadores */}
+        <TabsContent value="utilizadores" className="space-y-4">
+          <div className="flex justify-end">
+            <Dialog open={dialogAberto && abaSelecionada === 'utilizadores'} onOpenChange={setDialogAberto}>
+              <DialogTrigger asChild>
+                <Button className="bg-accent text-accent-foreground">
+                  <Plus size={18} className="mr-2" />
+                  Novo Utilizador
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Novo Utilizador</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Nome de Utilizador</label>
+                    <Input
+                      placeholder="usuario123"
+                      value={formUtilizador.nome}
+                      onChange={(e) => setFormUtilizador({ ...formUtilizador, nome: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Senha</label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={formUtilizador.senha}
+                      onChange={(e) => setFormUtilizador({ ...formUtilizador, senha: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-foreground">Papel</label>
+                    <select
+                      value={formUtilizador.papel}
+                      onChange={(e) => setFormUtilizador({ ...formUtilizador, papel: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                    >
+                      <option value="visualizador">Visualizador</option>
+                      <option value="operador">Operador</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button variant="outline" className="flex-1" onClick={() => setDialogAberto(false)}>
+                      Cancelar
+                    </Button>
+                    <Button className="flex-1 bg-accent text-accent-foreground" onClick={handleSalvarUtilizador}>
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Lista de Utilizadores */}
+          <div className="space-y-2">
+            {utilizadores.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">Nenhum utilizador registrado</p>
+              </Card>
+            ) : (
+              utilizadores.map((util) => (
+                <Card key={util.nome} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">{util.nome}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline">{util.papel}</Badge>
+                        <p className="text-xs text-muted-foreground">
+                          Criado em {new Date(util.dataCriacao).toLocaleDateString('pt-PT')}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removerUtilizador(util.nome)}
+                    >
+                      <Trash2 size={16} className="text-destructive" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

@@ -1,0 +1,131 @@
+import { useState } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import {
+  Package,
+  Search,
+  FileText,
+  Truck,
+  Lightbulb,
+  Menu,
+  X,
+  LayoutDashboard,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function MainLayout({ children }: MainLayoutProps) {
+  const { moduloAtivo, setModuloAtivo } = useApp();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const modulos = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'finder', label: 'Finder', icon: Search },
+    { id: 'solicitacoes', label: 'Solicitações', icon: FileText },
+    { id: 'despachos', label: 'Agenda de Despachos', icon: Truck },
+    { id: 'iluminacao', label: 'Iluminação Pública', icon: Lightbulb },
+  ];
+
+  const handleModuloChange = (moduloId: string) => {
+    setModuloAtivo(moduloId);
+    // Fechar sidebar em mobile
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 w-64 border-r border-border bg-card transition-transform duration-300 lg:relative lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {/* Header da Sidebar */}
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center gap-2">
+            <Package className="text-accent" size={24} />
+            <h1 className="text-lg font-bold text-foreground">LogisticaHub</h1>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden"
+          >
+            <X size={20} />
+          </Button>
+        </div>
+
+        {/* Menu de Navegação */}
+        <nav className="space-y-2 p-4">
+          {modulos.map((modulo) => {
+            const Icon = modulo.icon;
+            const isActive = moduloAtivo === modulo.id;
+
+            return (
+              <Button
+                key={modulo.id}
+                variant={isActive ? 'default' : 'ghost'}
+                className={cn(
+                  'w-full justify-start gap-3',
+                  isActive && 'bg-accent text-accent-foreground'
+                )}
+                onClick={() => handleModuloChange(modulo.id)}
+              >
+                <Icon size={18} />
+                <span>{modulo.label}</span>
+              </Button>
+            );
+          })}
+        </nav>
+
+        {/* Footer da Sidebar */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
+          <p className="text-xs text-muted-foreground">
+            Sistema de Gestão Logística v1.0
+          </p>
+        </div>
+      </aside>
+
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b border-border bg-card">
+          <div className="flex items-center justify-between p-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden"
+            >
+              <Menu size={20} />
+            </Button>
+            <h2 className="text-xl font-bold text-foreground">
+              {modulos.find(m => m.id === moduloAtivo)?.label}
+            </h2>
+            <div className="w-10" /> {/* Spacer para balancear layout */}
+          </div>
+        </header>
+
+        {/* Conteúdo */}
+        <div className="p-4 lg:p-6">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

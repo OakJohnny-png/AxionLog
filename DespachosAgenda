@@ -1,0 +1,134 @@
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, AlertCircle } from 'lucide-react';
+
+interface PedidoItem {
+  cliente: string;
+  os: string;
+  pedido_numero: string;
+  pedido_id: number;
+}
+
+interface AgendaData {
+  [data: string]: PedidoItem[];
+}
+
+interface DespachosAgendaProps {
+  onSelectPedido: (pedidoId: number) => void;
+  selectedPedidoId: number | null;
+}
+
+export default function DespachosAgenda({ onSelectPedido, selectedPedidoId }: DespachosAgendaProps) {
+  const [agenda, setAgenda] = useState<AgendaData>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAgenda = async () => {
+      try {
+        setLoading(true);
+        // Dados de teste simulados
+        const mockData: AgendaData = {
+          '2026-04-25': [
+            { cliente: 'Construtora Silva', os: '001', pedido_numero: 'PED-2026-001', pedido_id: 1 },
+            { cliente: 'Obra Centro', os: '002', pedido_numero: 'PED-2026-002', pedido_id: 2 },
+          ],
+          '2026-04-26': [
+            { cliente: 'Reforma Ltda', os: '003', pedido_numero: 'PED-2026-003', pedido_id: 3 },
+          ],
+          '2026-04-27': [
+            { cliente: 'Construtora Silva', os: '004', pedido_numero: 'PED-2026-004', pedido_id: 4 },
+            { cliente: 'Construção Geral', os: '005', pedido_numero: 'PED-2026-005', pedido_id: 5 },
+            { cliente: 'Obra Centro', os: '006', pedido_numero: 'PED-2026-006', pedido_id: 6 },
+          ],
+        };
+        setAgenda(mockData);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgenda();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin text-accent" size={32} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 p-4">
+        <AlertCircle className="text-destructive" size={32} />
+        <p className="text-destructive text-sm">{error}</p>
+      </div>
+    );
+  }
+
+  const datas = Object.keys(agenda).sort();
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-6 p-4">
+        {datas.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Nenhum despacho pendente</p>
+          </div>
+        ) : (
+          datas.map((data, idx) => (
+            <div key={data} className="relative">
+              {/* Linha vertical de conexão (exceto no último item) */}
+              {idx < datas.length - 1 && (
+                <div className="absolute left-6 top-12 w-0.5 h-12 bg-accent" />
+              )}
+
+              {/* Cabeçalho da data com círculo */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative z-10">
+                  <div className="w-4 h-4 rounded-full bg-accent border-2 border-background shadow-md" />
+                </div>
+                <h3 className="font-bold text-sm text-foreground">{data}</h3>
+              </div>
+
+              {/* Cards de pedidos para esta data */}
+              <div className="ml-8 space-y-2">
+                {agenda[data].map((pedido) => (
+                  <Card
+                    key={pedido.pedido_id}
+                    className={`p-3 cursor-pointer transition-all border-l-4 ${
+                      selectedPedidoId === pedido.pedido_id
+                        ? 'border-l-accent bg-secondary shadow-md'
+                        : 'border-l-border hover:border-l-accent hover:shadow-sm'
+                    }`}
+                    onClick={() => onSelectPedido(pedido.pedido_id)}
+                  >
+                    <div className="space-y-1">
+                      <p className="font-semibold text-sm text-foreground">
+                        {pedido.cliente}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          OS {pedido.os}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        Pedido: {pedido.pedido_numero}
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

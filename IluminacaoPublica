@@ -1,0 +1,281 @@
+import { useState } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Lightbulb, MapPin, CheckCircle, AlertCircle, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+
+export default function IluminacaoPublica() {
+  const { rotasIluminacao } = useApp();
+  const [rotaSelecionada, setRotaSelecionada] = useState<number | null>(null);
+  const [dialogAberto, setDialogAberto] = useState(false);
+
+  const rota = rotaSelecionada
+    ? rotasIluminacao.find(r => r.id === rotaSelecionada)
+    : null;
+
+  const tarefasCompletas = rota
+    ? rota.tarefas.filter(t => t.status === 'concluida').length
+    : 0;
+
+  const totalTarefas = rota ? rota.tarefas.length : 0;
+  const percentualCompleto = totalTarefas > 0 ? (tarefasCompletas / totalTarefas) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Lightbulb className="text-accent" size={28} />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Iluminação Pública</h1>
+            <p className="text-sm text-muted-foreground">
+              Gerenciar rotas e tarefas de manutenção
+            </p>
+          </div>
+        </div>
+        <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+          <DialogTrigger asChild>
+            <Button className="bg-accent text-accent-foreground">
+              <Plus size={18} className="mr-2" />
+              Nova Rota
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar Nova Rota</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-foreground">Nome da Rota</label>
+                <Input placeholder="Ex: Rota Leste" />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-foreground">Bairros (separados por vírgula)</label>
+                <Input placeholder="Ex: Bairro A, Bairro B, Bairro C" />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setDialogAberto(false)}>
+                  Cancelar
+                </Button>
+                <Button className="flex-1 bg-accent text-accent-foreground">
+                  Criar Rota
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna Esquerda: Lista de Rotas */}
+        <div className="lg:col-span-1">
+          <Card className="h-full border border-border">
+            <div className="border-b border-border p-4">
+              <h2 className="font-bold text-foreground">Rotas</h2>
+            </div>
+
+            <div className="overflow-y-auto">
+              <div className="space-y-2 p-4">
+                {rotasIluminacao.map((r) => {
+                  const completas = r.tarefas.filter(t => t.status === 'concluida').length;
+                  const percentual = r.tarefas.length > 0 ? (completas / r.tarefas.length) * 100 : 0;
+
+                  return (
+                    <Card
+                      key={r.id}
+                      className={`p-3 cursor-pointer transition-all border-l-4 ${
+                        rotaSelecionada === r.id
+                          ? 'border-l-accent bg-secondary'
+                          : 'border-l-border hover:border-l-accent'
+                      }`}
+                      onClick={() => setRotaSelecionada(r.id)}
+                    >
+                      <div className="space-y-2">
+                        <p className="font-semibold text-sm text-foreground">{r.nome}</p>
+                        <div className="w-full bg-secondary rounded-full h-2">
+                          <div
+                            className="bg-accent h-2 rounded-full transition-all"
+                            style={{ width: `${percentual}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {completas}/{r.tarefas.length} tarefas
+                        </p>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Coluna Direita: Detalhes da Rota */}
+        <div className="lg:col-span-2">
+          <Card className="h-full border border-border">
+            <div className="border-b border-border p-4">
+              <h2 className="font-bold text-foreground">Detalhes da Rota</h2>
+            </div>
+
+            <div className="overflow-y-auto">
+              {!rotaSelecionada ? (
+                <div className="flex items-center justify-center h-full min-h-96">
+                  <p className="text-muted-foreground">Selecione uma rota para ver os detalhes</p>
+                </div>
+              ) : !rota ? (
+                <div className="flex items-center justify-center h-full min-h-96">
+                  <p className="text-muted-foreground">Rota não encontrada</p>
+                </div>
+              ) : (
+                <div className="p-6 space-y-6">
+                  {/* Informações da Rota */}
+                  <div>
+                    <h3 className="font-bold text-lg text-foreground mb-4">{rota.nome}</h3>
+
+                    {/* Progresso */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-foreground">Progresso</p>
+                        <p className="text-sm font-bold text-accent">{Math.round(percentualCompleto)}%</p>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-3">
+                        <div
+                          className="bg-accent h-3 rounded-full transition-all"
+                          style={{ width: `${percentualCompleto}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {tarefasCompletas} de {totalTarefas} tarefas concluídas
+                      </p>
+                    </div>
+
+                    {/* Bairros */}
+                    <div className="mb-6">
+                      <p className="text-sm font-semibold text-foreground mb-2">Bairros Atendidos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {rota.bairros.map((bairro, idx) => (
+                          <Badge key={idx} variant="outline">
+                            <MapPin size={12} className="mr-1" />
+                            {bairro}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tarefas */}
+                  <div className="border-t border-border pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-foreground">Tarefas</h3>
+                      <Button size="sm" variant="outline">
+                        <Plus size={16} className="mr-1" />
+                        Adicionar
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {rota.tarefas.map((tarefa) => (
+                        <Card
+                          key={tarefa.id}
+                          className={`p-4 flex items-start gap-4 border-l-4 ${
+                            tarefa.status === 'concluida'
+                              ? 'border-l-green-600 bg-green-50'
+                              : 'border-l-yellow-600 bg-yellow-50'
+                          }`}
+                        >
+                          <div className="flex-shrink-0 mt-1">
+                            {tarefa.status === 'concluida' ? (
+                              <CheckCircle size={20} className="text-green-600" />
+                            ) : (
+                              <AlertCircle size={20} className="text-yellow-600" />
+                            )}
+                          </div>
+
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">{tarefa.descricao}</p>
+                            <Badge
+                              className={`mt-2 ${
+                                tarefa.status === 'concluida'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              {tarefa.status === 'concluida' ? 'Concluída' : 'Pendente'}
+                            </Badge>
+                          </div>
+
+                          {tarefa.status === 'pendente' && (
+                            <Button
+                              size="sm"
+                              className="bg-green-600 text-white hover:bg-green-700"
+                            >
+                              Concluir
+                            </Button>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botões de Ação */}
+                  <div className="flex gap-2 pt-4 border-t border-border">
+                    <Button variant="outline" className="flex-1">
+                      Gerar Relatório
+                    </Button>
+                    <Button variant="outline" className="flex-1">
+                      Editar Rota
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Resumo Geral */}
+      <Card className="p-6 bg-secondary">
+        <h3 className="font-bold text-foreground mb-4">Resumo Geral</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Total de Rotas</p>
+            <p className="text-2xl font-bold text-foreground">{rotasIluminacao.length}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total de Tarefas</p>
+            <p className="text-2xl font-bold text-foreground">
+              {rotasIluminacao.reduce((acc, r) => acc + r.tarefas.length, 0)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Tarefas Concluídas</p>
+            <p className="text-2xl font-bold text-accent">
+              {rotasIluminacao.reduce(
+                (acc, r) => acc + r.tarefas.filter(t => t.status === 'concluida').length,
+                0
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Progresso Geral</p>
+            <p className="text-2xl font-bold text-foreground">
+              {Math.round(
+                (rotasIluminacao.reduce(
+                  (acc, r) => acc + r.tarefas.filter(t => t.status === 'concluida').length,
+                  0
+                ) /
+                  rotasIluminacao.reduce((acc, r) => acc + r.tarefas.length, 0)) *
+                  100
+              )}
+              %
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

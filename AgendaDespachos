@@ -1,0 +1,309 @@
+import { useState, useMemo } from 'react';
+import { useApp } from '@/contexts/AppContext';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar, Truck, CheckCircle, AlertCircle } from 'lucide-react';
+
+export default function AgendaDespachos() {
+  const { despachos, pedidos, atualizarDespacho } = useApp();
+  const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null);
+
+  // Agrupar despachos por data
+  const despachosAgrupados = useMemo(() => {
+    const agrupados: { [key: string]: typeof despachos } = {};
+    despachos.forEach(despacho => {
+      if (!agrupados[despacho.data]) {
+        agrupados[despacho.data] = [];
+      }
+      agrupados[despacho.data].push(despacho);
+    });
+    return agrupados;
+  }, [despachos]);
+
+  const datasSortidas = Object.keys(despachosAgrupados).sort();
+
+  // Obter detalhes do pedido selecionado
+  const pedidoSelecionado = selectedPedidoId
+    ? pedidos.find(p => p.id === selectedPedidoId)
+    : null;
+
+  const handleConfirmarDespacho = (pedidoId: number) => {
+    atualizarDespacho(pedidoId, 'pronto');
+  };
+
+  const handleDespachar = (pedidoId: number) => {
+    atualizarDespacho(pedidoId, 'despachado');
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pendente':
+        return <AlertCircle size={16} className="text-yellow-600" />;
+      case 'em_preparacao':
+        return <Truck size={16} className="text-blue-600" />;
+      case 'pronto':
+        return <CheckCircle size={16} className="text-green-600" />;
+      case 'despachado':
+        return <CheckCircle size={16} className="text-gray-600" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: { [key: string]: string } = {
+      pendente: 'Pendente',
+      em_preparacao: 'Em Preparação',
+      pronto: 'Pronto',
+      despachado: 'Despachado',
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pendente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'em_preparacao':
+        return 'bg-blue-100 text-blue-800';
+      case 'pronto':
+        return 'bg-green-100 text-green-800';
+      case 'despachado':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Truck className="text-accent" size={28} />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Agenda de Despachos</h1>
+          <p className="text-sm text-muted-foreground">
+            {despachos.length} despacho(s) registrado(s)
+          </p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      {despachos.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Truck className="mx-auto text-muted-foreground mb-4" size={48} />
+          <p className="text-muted-foreground mb-4">
+            Nenhum despacho agendado. Crie pedidos no módulo de Solicitações para aparecerem aqui.
+          </p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Coluna Esquerda: Timeline */}
+          <div className="lg:col-span-1">
+            <Card className="h-full border border-border">
+              <div className="border-b border-border p-4">
+                <div className="flex items-center gap-2">
+                  <Calendar size={18} className="text-accent" />
+                  <h2 className="font-bold text-foreground">Agenda</h2>
+                </div>
+              </div>
+
+              <div className="h-full overflow-y-auto">
+                <div className="space-y-6 p-4">
+                  {datasSortidas.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Nenhum despacho pendente</p>
+                    </div>
+                  ) : (
+                    datasSortidas.map((data, idx) => (
+                      <div key={data} className="relative">
+                        {/* Linha vertical de conexão */}
+                        {idx < datasSortidas.length - 1 && (
+                          <div className="absolute left-6 top-12 w-0.5 h-12 bg-accent" />
+                        )}
+
+                        {/* Cabeçalho da data */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="relative z-10">
+                            <div className="w-4 h-4 rounded-full bg-accent border-2 border-background shadow-md" />
+                          </div>
+                          <h3 className="font-bold text-sm text-foreground">{data}</h3>
+                        </div>
+
+                        {/* Cards de despachos */}
+                        <div className="ml-8 space-y-2">
+                          {despachosAgrupados[data].map((despacho) => (
+                            <Card
+                              key={despacho.pedidoId}
+                              className={`p-3 cursor-pointer transition-all border-l-4 ${
+                                selectedPedidoId === despacho.pedidoId
+                                  ? 'border-l-accent bg-secondary shadow-md'
+                                  : 'border-l-border hover:border-l-accent hover:shadow-sm'
+                              }`}
+                              onClick={() => setSelectedPedidoId(despacho.pedidoId)}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-semibold text-sm text-foreground">
+                                    {despacho.cliente}
+                                  </p>
+                                  {getStatusIcon(despacho.status)}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs font-mono">
+                                    OS {despacho.os}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground font-mono">
+                                  {despacho.numero}
+                                </p>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Coluna Direita: Detalhes */}
+          <div className="lg:col-span-2">
+            <Card className="h-full border border-border">
+              <div className="border-b border-border p-4">
+                <div className="flex items-center gap-2">
+                  <Truck size={18} className="text-accent" />
+                  <h2 className="font-bold text-foreground">Detalhes do Despacho</h2>
+                </div>
+              </div>
+
+              <div className="h-full overflow-y-auto">
+                {!selectedPedidoId ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">Selecione um despacho para ver os detalhes</p>
+                  </div>
+                ) : !pedidoSelecionado ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">Despacho não encontrado</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-6">
+                    {/* Informações do Despacho */}
+                    <div>
+                      <h3 className="font-bold text-foreground mb-4">Informações do Despacho</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Número</p>
+                          <p className="font-mono font-semibold text-foreground">
+                            {pedidoSelecionado.numero}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">OS</p>
+                          <p className="font-semibold text-foreground">
+                            {pedidoSelecionado.os}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Cliente</p>
+                          <p className="font-semibold text-foreground">
+                            {pedidoSelecionado.cliente}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <Badge className={getStatusColor(pedidoSelecionado.status)}>
+                            {getStatusLabel(pedidoSelecionado.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Materiais */}
+                    <div className="border-t border-border pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-foreground">Materiais do Pedido</h3>
+                        <Badge className="bg-accent text-accent-foreground">
+                          {pedidoSelecionado.materiais.length} itens
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-3">
+                        {pedidoSelecionado.materiais.map((material, idx) => (
+                          <Card key={idx} className="p-4 border-l-4 border-l-accent">
+                            <div className="space-y-3">
+                              <div>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <p className="font-mono font-semibold text-sm text-foreground">
+                                      {material.codigo}
+                                    </p>
+                                    <p className="text-sm text-foreground mt-1">
+                                      {material.descricao}
+                                    </p>
+                                  </div>
+                                  <Badge variant="secondary" className="whitespace-nowrap">
+                                    {material.quantidade} {material.unidade}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-2 border-t border-border">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-muted-foreground">Localização</p>
+                                  <p className="font-mono text-sm text-foreground break-words">
+                                    {material.localizacao}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botões de Ação */}
+                    {pedidoSelecionado.status !== 'despachado' && (
+                      <div className="flex gap-2 pt-4 border-t border-border">
+                        {pedidoSelecionado.status === 'pendente' && (
+                          <Button
+                            className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={() => atualizarDespacho(pedidoSelecionado.id, 'em_preparacao')}
+                          >
+                            Iniciar Preparação
+                          </Button>
+                        )}
+                        {pedidoSelecionado.status === 'em_preparacao' && (
+                          <Button
+                            className="flex-1 bg-green-600 text-white hover:bg-green-700"
+                            onClick={() => handleConfirmarDespacho(pedidoSelecionado.id)}
+                          >
+                            Confirmar Preparação
+                          </Button>
+                        )}
+                        {pedidoSelecionado.status === 'pronto' && (
+                          <Button
+                            className="flex-1 bg-accent text-accent-foreground"
+                            onClick={() => handleDespachar(pedidoSelecionado.id)}
+                          >
+                            Confirmar Despacho
+                          </Button>
+                        )}
+                        <Button variant="outline" className="flex-1">
+                          Imprimir Lista
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

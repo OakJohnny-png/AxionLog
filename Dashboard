@@ -1,0 +1,163 @@
+import { useApp } from '@/contexts/AppContext';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Package, Truck, Lightbulb, FileText, ArrowRight } from 'lucide-react';
+
+export default function Dashboard() {
+  const { pedidos, despachos, rotasIluminacao, setModuloAtivo } = useApp();
+
+  // Calcular estatísticas
+  const pedidosPendentes = pedidos.filter(p => p.status === 'pendente').length;
+  const despachosEmPreparacao = despachos.filter(d => d.status === 'em_preparacao').length;
+  const tarefasIluminacao = rotasIluminacao.reduce((acc, rota) => acc + rota.tarefas.length, 0);
+  const tarefasCompletas = rotasIluminacao.reduce(
+    (acc, rota) => acc + rota.tarefas.filter(t => t.status === 'concluida').length,
+    0
+  );
+
+  const cards = [
+    {
+      titulo: 'Solicitações Pendentes',
+      valor: pedidosPendentes,
+      icon: FileText,
+      cor: 'text-blue-600',
+      modulo: 'solicitacoes',
+    },
+    {
+      titulo: 'Despachos em Preparação',
+      valor: despachosEmPreparacao,
+      icon: Truck,
+      cor: 'text-amber-600',
+      modulo: 'despachos',
+    },
+    {
+      titulo: 'Tarefas de Iluminação',
+      valor: `${tarefasCompletas}/${tarefasIluminacao}`,
+      icon: Lightbulb,
+      cor: 'text-yellow-600',
+      modulo: 'iluminacao',
+    },
+    {
+      titulo: 'Total de Pedidos',
+      valor: pedidos.length,
+      icon: Package,
+      cor: 'text-green-600',
+      modulo: 'solicitacoes',
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card key={card.titulo} className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{card.titulo}</p>
+                  <p className="text-3xl font-bold text-foreground mt-2">{card.valor}</p>
+                </div>
+                <Icon className={`${card.cor}`} size={32} />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-4 w-full justify-start text-accent"
+                onClick={() => setModuloAtivo(card.modulo)}
+              >
+                Acessar <ArrowRight size={16} className="ml-2" />
+              </Button>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Resumo de Atividades Recentes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Últimos Pedidos */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold text-foreground mb-4">Últimos Pedidos</h3>
+          {pedidos.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Nenhum pedido criado ainda</p>
+          ) : (
+            <div className="space-y-3">
+              {pedidos.slice(-3).reverse().map((pedido) => (
+                <div key={pedido.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">{pedido.numero}</p>
+                    <p className="text-xs text-muted-foreground">{pedido.cliente}</p>
+                  </div>
+                  <Badge variant={pedido.status === 'pendente' ? 'default' : 'secondary'}>
+                    {pedido.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            className="w-full mt-4"
+            onClick={() => setModuloAtivo('solicitacoes')}
+          >
+            Ver Todos os Pedidos
+          </Button>
+        </Card>
+
+        {/* Despachos Pendentes */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold text-foreground mb-4">Despachos Pendentes</h3>
+          {despachos.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Nenhum despacho pendente</p>
+          ) : (
+            <div className="space-y-3">
+              {despachos.filter(d => d.status !== 'despachado').slice(0, 3).map((despacho) => (
+                <div key={despacho.pedidoId} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">{despacho.numero}</p>
+                    <p className="text-xs text-muted-foreground">{despacho.cliente}</p>
+                  </div>
+                  <Badge variant="outline" className="border-accent text-accent">
+                    {despacho.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            className="w-full mt-4"
+            onClick={() => setModuloAtivo('despachos')}
+          >
+            Ver Agenda Completa
+          </Button>
+        </Card>
+      </div>
+
+      {/* Rotas de Iluminação */}
+      <Card className="p-6">
+        <h3 className="text-lg font-bold text-foreground mb-4">Rotas de Iluminação Pública</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {rotasIluminacao.map((rota) => (
+            <div key={rota.id} className="p-4 bg-secondary rounded-lg">
+              <p className="font-semibold text-foreground">{rota.nome}</p>
+              <p className="text-xs text-muted-foreground mt-1">{rota.bairros.join(', ')}</p>
+              <p className="text-sm text-accent font-semibold mt-3">
+                {rota.tarefas.filter(t => t.status === 'concluida').length}/{rota.tarefas.length} tarefas
+              </p>
+            </div>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          className="w-full mt-4"
+          onClick={() => setModuloAtivo('iluminacao')}
+        >
+          Gerenciar Iluminação
+        </Button>
+      </Card>
+    </div>
+  );
+}

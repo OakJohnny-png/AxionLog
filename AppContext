@@ -1,0 +1,170 @@
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+// Tipos de dados
+export interface Material {
+  codigo: string;
+  descricao: string;
+  localizacao: string;
+  quantidade: number;
+  unidade: string;
+}
+
+export interface Pedido {
+  id: number;
+  numero: string;
+  cliente: string;
+  os: string;
+  data: string;
+  materiais: Material[];
+  status: 'pendente' | 'em_preparacao' | 'pronto' | 'despachado';
+  dataPrevista?: string;
+}
+
+export interface Despacho {
+  pedidoId: number;
+  data: string;
+  cliente: string;
+  os: string;
+  numero: string;
+  status: 'pendente' | 'em_preparacao' | 'pronto' | 'despachado';
+}
+
+export interface RotaIluminacao {
+  id: number;
+  nome: string;
+  bairros: string[];
+  tarefas: {
+    id: number;
+    descricao: string;
+    status: 'pendente' | 'concluida';
+  }[];
+}
+
+// Context
+interface AppContextType {
+  // Pedidos
+  pedidos: Pedido[];
+  adicionarPedido: (pedido: Pedido) => void;
+  atualizarPedido: (id: number, pedido: Partial<Pedido>) => void;
+  obterPedido: (id: number) => Pedido | undefined;
+
+  // Despachos
+  despachos: Despacho[];
+  adicionarDespacho: (despacho: Despacho) => void;
+  atualizarDespacho: (pedidoId: number, status: string) => void;
+
+  // Rotas de Iluminação
+  rotasIluminacao: RotaIluminacao[];
+  atualizarRotaIluminacao: (id: number, rota: Partial<RotaIluminacao>) => void;
+
+  // Navegação
+  moduloAtivo: string;
+  setModuloAtivo: (modulo: string) => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [despachos, setDespachos] = useState<Despacho[]>([]);
+  const [moduloAtivo, setModuloAtivo] = useState('dashboard');
+
+  // Dados de teste para rotas de iluminação
+  const [rotasIluminacao] = useState<RotaIluminacao[]>([
+    {
+      id: 1,
+      nome: 'Rota Centro',
+      bairros: ['Centro', 'Comércio', 'Praça'],
+      tarefas: [
+        { id: 1, descricao: 'Verificar postes da Rua A', status: 'pendente' },
+        { id: 2, descricao: 'Trocar lâmpadas Rua B', status: 'concluida' },
+      ],
+    },
+    {
+      id: 2,
+      nome: 'Rota Norte',
+      bairros: ['Vila Norte', 'Jardim Novo', 'Parque'],
+      tarefas: [
+        { id: 3, descricao: 'Limpeza de luminárias', status: 'pendente' },
+      ],
+    },
+    {
+      id: 3,
+      nome: 'Rota Sul',
+      bairros: ['Vila Sul', 'Residencial', 'Industrial'],
+      tarefas: [
+        { id: 4, descricao: 'Manutenção preventiva', status: 'pendente' },
+        { id: 5, descricao: 'Reparos emergenciais', status: 'concluida' },
+      ],
+    },
+  ]);
+
+  const adicionarPedido = (pedido: Pedido) => {
+    setPedidos([...pedidos, pedido]);
+    // Adicionar automaticamente à agenda de despachos
+    const despacho: Despacho = {
+      pedidoId: pedido.id,
+      data: pedido.data,
+      cliente: pedido.cliente,
+      os: pedido.os,
+      numero: pedido.numero,
+      status: 'pendente',
+    };
+    setDespachos([...despachos, despacho]);
+  };
+
+  const atualizarPedido = (id: number, updates: Partial<Pedido>) => {
+    setPedidos(pedidos.map(p => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  const obterPedido = (id: number) => {
+    return pedidos.find(p => p.id === id);
+  };
+
+  const adicionarDespacho = (despacho: Despacho) => {
+    setDespachos([...despachos, despacho]);
+  };
+
+  const atualizarDespacho = (pedidoId: number, status: string) => {
+    setDespachos(
+      despachos.map(d =>
+        d.pedidoId === pedidoId
+          ? { ...d, status: status as any }
+          : d
+      )
+    );
+    atualizarPedido(pedidoId, { status: status as any });
+  };
+
+  const atualizarRotaIluminacao = (id: number, updates: Partial<RotaIluminacao>) => {
+    // Implementação para atualizar rotas
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        pedidos,
+        adicionarPedido,
+        atualizarPedido,
+        obterPedido,
+        despachos,
+        adicionarDespacho,
+        atualizarDespacho,
+        rotasIluminacao,
+        atualizarRotaIluminacao,
+        moduloAtivo,
+        setModuloAtivo,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp deve ser usado dentro de AppProvider');
+  }
+  return context;
+};

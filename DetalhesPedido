@@ -1,0 +1,171 @@
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Loader2, AlertCircle, MapPin, Package } from 'lucide-react';
+
+interface Material {
+  codigo: string;
+  descricao: string;
+  localizacao: string;
+  quantidade: number;
+  unidade: string;
+}
+
+interface DetalhesPedidoProps {
+  pedidoId: number | null;
+}
+
+export default function DetalhesPedido({ pedidoId }: DetalhesPedidoProps) {
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Dados de teste simulados por pedido
+  const mockMateriais: { [key: number]: Material[] } = {
+    1: [
+      { codigo: 'MAT-001', descricao: 'Cimento Portland 50kg', localizacao: 'Bloco A - Prateleira 3', quantidade: 50, unidade: 'sacos' },
+      { codigo: 'MAT-002', descricao: 'Areia Média m³', localizacao: 'Pátio Externo - Pilha 1', quantidade: 10, unidade: 'm³' },
+      { codigo: 'MAT-003', descricao: 'Brita 19mm m³', localizacao: 'Pátio Externo - Pilha 2', quantidade: 8, unidade: 'm³' },
+    ],
+    2: [
+      { codigo: 'MAT-004', descricao: 'Tijolos 6 furos', localizacao: 'Bloco B - Prateleira 1', quantidade: 1000, unidade: 'unidades' },
+      { codigo: 'MAT-005', descricao: 'Cal Hidratada 20kg', localizacao: 'Bloco A - Prateleira 2', quantidade: 30, unidade: 'sacos' },
+    ],
+    3: [
+      { codigo: 'MAT-006', descricao: 'Ferro 5/16" 12m', localizacao: 'Bloco C - Prateleira 1', quantidade: 200, unidade: 'barras' },
+      { codigo: 'MAT-007', descricao: 'Arame Recozido 1kg', localizacao: 'Bloco C - Prateleira 2', quantidade: 50, unidade: 'bobinas' },
+      { codigo: 'MAT-008', descricao: 'Tela de Aço 2x2', localizacao: 'Bloco D - Prateleira 1', quantidade: 100, unidade: 'm²' },
+    ],
+    4: [
+      { codigo: 'MAT-009', descricao: 'Telha Cerâmica Francesa', localizacao: 'Bloco E - Prateleira 1', quantidade: 500, unidade: 'unidades' },
+      { codigo: 'MAT-010', descricao: 'Cumeeira Cerâmica', localizacao: 'Bloco E - Prateleira 2', quantidade: 50, unidade: 'unidades' },
+    ],
+    5: [
+      { codigo: 'MAT-011', descricao: 'Cano PVC 100mm', localizacao: 'Bloco F - Prateleira 1', quantidade: 100, unidade: 'metros' },
+      { codigo: 'MAT-012', descricao: 'Joelho PVC 90° 100mm', localizacao: 'Bloco F - Prateleira 2', quantidade: 200, unidade: 'unidades' },
+    ],
+    6: [
+      { codigo: 'MAT-013', descricao: 'Fio Elétrico 2.5mm', localizacao: 'Bloco G - Prateleira 1', quantidade: 500, unidade: 'metros' },
+      { codigo: 'MAT-014', descricao: 'Disjuntor 32A', localizacao: 'Bloco G - Prateleira 2', quantidade: 20, unidade: 'unidades' },
+      { codigo: 'MAT-015', descricao: 'Tomada 2P+T', localizacao: 'Bloco G - Prateleira 3', quantidade: 100, unidade: 'unidades' },
+    ],
+  };
+
+  useEffect(() => {
+    if (!pedidoId) {
+      setMateriais([]);
+      return;
+    }
+
+    const fetchDetalhes = async () => {
+      try {
+        setLoading(true);
+        // Simular delay de carregamento
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const data = mockMateriais[pedidoId] || [];
+        setMateriais(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetalhes();
+  }, [pedidoId]);
+
+  if (!pedidoId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Selecione um pedido para ver os detalhes</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin text-accent" size={32} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 p-4">
+        <AlertCircle className="text-destructive" size={32} />
+        <p className="text-destructive text-sm">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-foreground">Materiais do Pedido</h2>
+          <Badge className="bg-accent text-accent-foreground">
+            {materiais.length} itens
+          </Badge>
+        </div>
+
+        {materiais.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Nenhum material neste pedido</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {materiais.map((material, idx) => (
+              <Card key={idx} className="p-4 border-l-4 border-l-accent">
+                <div className="space-y-3">
+                  {/* Código e Descrição */}
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-mono font-semibold text-sm text-foreground">
+                          {material.codigo}
+                        </p>
+                        <p className="text-sm text-foreground mt-1">
+                          {material.descricao}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="whitespace-nowrap">
+                        {material.quantidade} {material.unidade}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Localização */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border">
+                    <MapPin size={16} className="text-accent flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Localização</p>
+                      <p className="font-mono text-sm text-foreground break-words">
+                        {material.localizacao}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Botões de Ação */}
+        {materiais.length > 0 && (
+          <div className="flex gap-2 pt-4 border-t border-border">
+            <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90">
+              <Package size={16} className="mr-2" />
+              Preparar Despacho
+            </Button>
+            <Button variant="outline" className="flex-1">
+              Imprimir Lista
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
